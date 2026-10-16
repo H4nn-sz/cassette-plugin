@@ -11,6 +11,8 @@ Plugin VST3 / Standalone de cinta lo-fi y espacio, hecho con JUCE 8 (interfaz en
 
 [**Descargar Cassette (instalador para Windows)**](https://drive.google.com/file/d/1-SUwo3lwjG75coa9njn6u3gQl8Hg1-Dm/view?usp=sharing)
 
+**Clave de prueba (trial):** `CASSETTE-TRIAL-1D6D-DED7`
+
 ## Compilar (Windows)
 
 ```
