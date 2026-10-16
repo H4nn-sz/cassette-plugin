@@ -7,6 +7,10 @@ Plugin VST3 / Standalone de cinta lo-fi y espacio, hecho con JUCE 8 (interfaz en
 - Room / Hall / Space con reverb, pre-delay, brillo y ancho
 - Un knob de **Edad** que escala toda la cinta; buscador y guardado de tus propias cintas
 
+## Descargar
+
+[**Descargar Cassette (instalador para Windows)**](https://drive.google.com/file/d/1-SUwo3lwjG75coa9njn6u3gQl8Hg1-Dm/view?usp=sharing)
+
 ## Compilar (Windows)
 
 ```
