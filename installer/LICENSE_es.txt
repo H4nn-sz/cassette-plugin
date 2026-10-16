@@ -1,0 +1,13 @@
+﻿CASSETTE — CONTRATO DE LICENCIA DE USUARIO FINAL (VERSIÓN GRATUITA)
+=================================================================
+Copyright (c) 2026 SVNDALPHON. Todos los derechos reservados.
+
+Cassette es gratis. Puedes usarlo sin costo en proyectos personales y comerciales:
+la música que hagas con Cassette es 100 % tuya.
+
+Queda prohibido vender, alquilar o redistribuir este software (o partes de él)
+sin permiso por escrito de SVNDALPHON. Para compartirlo, comparte el enlace oficial
+de descarga.
+
+EL SOFTWARE SE PROPORCIONA "TAL CUAL", SIN GARANTÍA DE NINGÚN TIPO. SVNDALPHON NO
+SE HACE RESPONSABLE DE DAÑOS DERIVADOS DE SU USO.

@@ -1,0 +1,18 @@
+# Compilación e instalador generados
+build/
+installer_output/
+
+# Renders de audio de prueba
+renders/
+
+# Video promo: solo el código; los medios (música propia, FX de terceros, mp4) no se suben
+promo/node_modules/
+promo/.hyperframes/
+promo/snaps*/
+promo/*.mp4
+promo/assets/*.mp3
+promo/assets/*.wav
+promo/package-lock.json
+
+*.user
+.vs/
