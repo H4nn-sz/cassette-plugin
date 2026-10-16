@@ -98,6 +98,28 @@ CassetteEditor::CassetteEditor (CassetteProcessor& p)
             if (safe != nullptr && a.size() >= 1) safe->proc.setTheme (a[0].toString());
             complete ({});
         })
+        .withNativeFunction ("getLicenseState", [safe] (const Args&, Done complete)
+        {
+            complete (safe != nullptr ? safe->buildLicense() : juce::var());
+        })
+        .withNativeFunction ("activateLicense", [safe] (const Args& a, Done complete)
+        {
+            if (safe == nullptr) { complete ({}); return; }
+            safe->proc.getLicenseManager().activate (a.size() > 0 ? a[0].toString() : juce::String(), [safe, complete] (CassetteLic::ActivationResult r)
+            {
+                auto* o = new juce::DynamicObject();
+                o->setProperty ("success", r.success);
+                o->setProperty ("message", r.message);
+                o->setProperty ("code", r.code);
+                complete (juce::var (o));
+                if (safe != nullptr) safe->lastLicense = 0xFFFFFFFFu;   // fuerza el envío del estado nuevo
+            });
+        })
+        .withNativeFunction ("refreshLicense", [safe] (const Args&, Done complete)
+        {
+            if (safe != nullptr) safe->proc.getLicenseManager().requestRevalidation();
+            complete ({});
+        })
         .withNativeFunction ("openURL", [] (const Args& a, Done complete)
         {
             const auto url = a.size() >= 1 ? a[0].toString() : juce::String();
@@ -130,8 +152,24 @@ CassetteEditor::~CassetteEditor()
    #endif
 }
 
+juce::var CassetteEditor::buildLicense() const
+{
+    const auto s = proc.getLicenseManager().getLicenseState();
+    using K = CassetteLic::LicenseKind;
+    auto* o = new juce::DynamicObject();
+    o->setProperty ("isValid", proc.isLicensed());
+    o->setProperty ("isTrial", s.isTrial);
+    o->setProperty ("kind", s.kind == K::Trial ? "trial" : s.kind == K::Subscription ? "subscription" : s.kind == K::Full ? "full" : "none");
+    o->setProperty ("code", s.code);
+    o->setProperty ("daysLeft", s.daysLeft);
+    o->setProperty ("serial", s.serial);
+    o->setProperty ("message", s.message);
+    return juce::var (o);
+}
+
 juce::var CassetteEditor::buildBootstrap()
 {
+    lastLicense = proc.getLicenseManager().getStateVersion();
     auto* o = new juce::DynamicObject();
     auto* params = new juce::DynamicObject();
     const auto& ids = CassetteProcessor::getParamIds();
@@ -166,6 +204,7 @@ juce::var CassetteEditor::buildBootstrap()
     o->setProperty ("program", lastProgram);
     o->setProperty ("theme", proc.getTheme());
     o->setProperty ("version", CASSETTE_VERSION_STRING);
+    o->setProperty ("license", buildLicense());
     return juce::var (o);
 }
 
@@ -192,6 +231,12 @@ void CassetteEditor::timerCallback()
 {
     if (web == nullptr || ! uiReady) return;
     pushParams (false);
+
+    if (proc.getLicenseManager().getStateVersion() != lastLicense)
+    {
+        lastLicense = proc.getLicenseManager().getStateVersion();
+        web->emitEventIfBrowserIsVisible ("license", buildLicense());
+    }
 
     // El host también puede cambiar de programa
     if (proc.getCurrentProgram() != lastProgram)

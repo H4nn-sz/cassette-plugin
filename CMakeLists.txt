@@ -51,8 +51,16 @@ juce_add_plugin(CassettePlugin
 # La interfaz (un solo HTML) va dentro del binario
 juce_add_binary_data(CassetteUI SOURCES ui/index.html)
 
-target_sources(CassettePlugin PRIVATE Source/PluginProcessor.cpp Source/PluginEditor.cpp)
+target_sources(CassettePlugin PRIVATE Source/PluginProcessor.cpp Source/PluginEditor.cpp
+    Source/licensing/Ed25519.cpp Source/licensing/Ed25519.h
+    Source/licensing/LicenseManager.cpp Source/licensing/LicenseManager.h)
+target_include_directories(CassettePlugin PRIVATE Source Source/licensing)
 
+# Solo para pruebas E2E con un servidor simulado (licencia aislada). NUNCA distribuir ese binario.
+set(CASSETTE_API_BASE_OVERRIDE "" CACHE STRING "URL del backend para pruebas (vacío = https://offszn.lat)")
+if(CASSETTE_API_BASE_OVERRIDE)
+    target_compile_definitions(CassettePlugin PRIVATE CASSETTE_API_BASE="${CASSETTE_API_BASE_OVERRIDE}" CASSETTE_STORE_TAG="_e2e")
+endif()
 target_compile_definitions(CassettePlugin PUBLIC
     JUCE_WEB_BROWSER=1
     $<$<BOOL:${WIN32}>:JUCE_USE_WIN_WEBVIEW2_WITH_STATIC_LINKING=1>
@@ -73,9 +81,22 @@ endif()
 juce_add_console_app(CassetteTest PRODUCT_NAME "CassetteTest")
 target_sources(CassetteTest PRIVATE tools/CassetteTest.cpp Source/PluginProcessor.cpp)
 target_compile_definitions(CassetteTest PRIVATE
-    JucePlugin_Name="Cassette" JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_USE_MP3AUDIOFORMAT=1 JUCE_MODAL_LOOPS_PERMITTED=0)
+    CASSETTE_TESTING=1 JucePlugin_Name="Cassette" JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_USE_MP3AUDIOFORMAT=1 JUCE_MODAL_LOOPS_PERMITTED=0)
 target_link_libraries(CassetteTest PRIVATE
     juce::juce_audio_processors juce::juce_audio_formats juce::juce_audio_utils juce::juce_dsp juce::juce_recommended_config_flags)
 if(MSVC)
     target_compile_options(CassetteTest PRIVATE /utf-8)
+endif()
+
+# Licencias / anti-abuso (reloj, red y disco simulados; firmas con tools/sign_test.mjs, necesita Node)
+juce_add_console_app(CassetteLicenseTests PRODUCT_NAME "CassetteLicenseTests")
+target_sources(CassetteLicenseTests PRIVATE tests/LicenseTests.cpp Source/licensing/Ed25519.cpp Source/licensing/LicenseManager.cpp)
+target_include_directories(CassetteLicenseTests PRIVATE Source Source/licensing)
+target_compile_definitions(CassetteLicenseTests PRIVATE
+    JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_MODAL_LOOPS_PERMITTED=0
+    CASSETTE_TOOLS_DIR="${CMAKE_SOURCE_DIR}/tools")
+target_link_libraries(CassetteLicenseTests PRIVATE
+    juce::juce_core juce::juce_events juce::juce_audio_basics juce::juce_recommended_config_flags)
+if(MSVC)
+    target_compile_options(CassetteLicenseTests PRIVATE /utf-8)
 endif()

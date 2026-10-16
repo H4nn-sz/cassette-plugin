@@ -28,6 +28,7 @@ public:
 private:
     void timerCallback() override;
     juce::var buildBootstrap();
+    juce::var buildLicense() const;
     void pushParams (bool force);
 
     CassetteProcessor& proc;
@@ -36,6 +37,7 @@ private:
     std::vector<float> lastSent;
     juce::StringArray openGestures;
     int lastProgram = -1;
+    uint32_t lastLicense = 0xFFFFFFFFu;
     bool uiReady = false;
    #if JUCE_WINDOWS
     bool comInitialised = false;

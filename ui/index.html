@@ -130,6 +130,21 @@ main{display:grid;grid-template-columns:440px 1fr;gap:42px;margin-top:16px}
 .knob .ptr{stroke:var(--fg)}
 .toast{position:fixed;left:50%;bottom:16px;transform:translate(-50%,20px);opacity:0;background:var(--fg);color:var(--bg);font:700 12px var(--mono);padding:8px 14px;border-radius:16px;transition:.25s;pointer-events:none}
 .toast.show{opacity:1;transform:translate(-50%,0)}
+/* Licencia: C++ decide, aquí solo se muestra */
+.badge.clk{cursor:pointer}
+#licWall{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:color-mix(in srgb,var(--bg) 92%,transparent)}
+#licWall.open{display:flex}
+#licWall .card{width:340px;background:var(--card);border:2px solid var(--fg);border-radius:14px;padding:22px 22px 18px;text-align:center;position:relative;user-select:text;-webkit-user-select:text}
+#licWall h3{font:700 14px var(--mono);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+#licWall p{font:12px/1.5 var(--sans);color:var(--muted);margin-bottom:14px}
+#licWall input{width:100%;background:var(--bg);border:2px solid var(--fg);border-radius:8px;padding:9px 10px;color:var(--fg);font:600 12px var(--mono);text-align:center;letter-spacing:1px;margin-bottom:8px;user-select:text;-webkit-user-select:text}
+#licWall input.bad{border-color:var(--led)}
+#licWall .err{min-height:16px;font:11px/1.4 var(--sans);color:var(--led);margin-bottom:8px}
+#licWall .pill{display:block;width:100%;padding:8px 12px;margin-bottom:8px;text-transform:uppercase}
+#licWall .pill.main{background:var(--fg);color:var(--bg)}
+#licWall .pill:disabled{opacity:.6;cursor:default}
+#licWall .foot{font:11px var(--sans);color:var(--muted)}
+#licWall .x{position:absolute;top:6px;right:12px;font:700 20px var(--mono);color:var(--muted)}
 </style>
 </head>
 <body>
@@ -270,6 +285,19 @@ main{display:grid;grid-template-columns:440px 1fr;gap:42px;margin-top:16px}
     </div>
   </section>
 </main>
+<div id="licWall">
+  <div class="card">
+    <button class="x" id="licClose" style="display:none" aria-label="Cerrar">×</button>
+    <h3 id="licTitle">Ingresa tu Serial Key</h3>
+    <p id="licSub">Activa Cassette en este equipo. Consigue tu licencia en OFFSZN.</p>
+    <input type="text" id="licInput" placeholder="CASSETTE-FULL-XXXXXXXX-XXXXXXXX" spellcheck="false" autocomplete="off" maxlength="60">
+    <div class="err" id="licErr"></div>
+    <button class="pill main" id="licGo">Activar plugin</button>
+    <button class="pill" id="licRetry" style="display:none">Reintentar</button>
+    <button class="pill" id="licBuy">Consigue tu licencia</button>
+    <div class="foot">Mientras no actives, tu audio pasa limpio: Cassette no lo toca.</div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -315,7 +343,7 @@ const HOST = !!backend;
 const pending = {}; let nextId = 0; const listeners = {};
 if (HOST) {
   backend.addEventListener('__juce__complete', d => { const p = pending[d.promiseId]; if (p) { delete pending[d.promiseId]; p(d.result); } });
-  ['params', 'program', 'meter'].forEach(ev => backend.addEventListener(ev, data => (listeners[ev] || []).forEach(fn => fn(data))));
+  ['params', 'program', 'meter', 'license'].forEach(ev => backend.addEventListener(ev, data => (listeners[ev] || []).forEach(fn => fn(data))));
 }
 const native = (name, ...args) => !HOST ? Promise.resolve(null)
   : new Promise(res => { const id = nextId++; pending[id] = res; backend.emitEvent('__juce__invoke', { name, params: args, resultId: id }); });
@@ -838,8 +866,10 @@ function boot(b) {
     Object.entries(b.params || {}).forEach(([k, v]) => { if (k === 'bypass') S.bypass = v > 0.5; else if (k === 'spaceType') S.params.spaceType = Math.round(v); else if (k in DEFS) { S.params[k] = v; S.shown[k] = v; } });
     S.program = b.program | 0;
     applyTheme(b.theme === 'dark' ? 'dark' : 'light');
-    if (b.version) $('badge').textContent = 'FREE · v' + b.version;
+    if (b.version) VERSION = b.version;
+    if (b.license) LIC = b.license;
   } else applyTheme('light');
+  renderLicense();
   S.hostCount = S.presets.length; S.presets = S.presets.concat(loadUser().map(p => ({ ...p, user: true })));
   buildPills(); buildWheel();
   W.pos = W.target = Math.max(0, W.list.indexOf(S.program));
@@ -857,6 +887,66 @@ on('program', p => {
   showPreset(true);
 });
 on('meter', v => { S.meter = +v || 0; });
+
+/* ═══════════ Licencia (C++ decide; aquí solo se muestra) ═══════════ */
+let VERSION = '', LIC = { isValid: true, kind: 'none', code: 'full', daysLeft: 0 }, licForced = false;
+const LIC_LOCK = {
+  none:    { t: 'Ingresa tu Serial Key', s: 'Activa Cassette en este equipo. Consigue tu licencia en OFFSZN.' },
+  expired: { t: 'Tu licencia terminó', s: 'Tu prueba o suscripción ya venció. Pega una clave nueva para seguir.' },
+  revoked: { t: 'Licencia no válida', s: 'Esta licencia ya no está autorizada en este equipo. Pega una clave válida.' },
+  tampered:{ t: 'Verifica tu licencia', s: 'No pudimos comprobar tu licencia aquí. Conéctate a internet y pega tu clave otra vez.' },
+  clock:   { t: 'Fecha y hora incorrectas', s: 'La fecha de tu PC es anterior a la última vez que usaste Cassette. Corrígela y reintenta.', retry: true }
+};
+const LIC_ERR = {
+  offline: 'No hay conexión con el servidor. Conéctate a internet para validar tu clave.',
+  bad_format: 'La clave no se ve bien. Ejemplo: CASSETTE-FULL-XXXXXXXX-XXXXXXXX',
+  bad_signature: 'No pudimos comprobar la respuesta del servidor. Revisa tu conexión (VPN o proxy) y prueba otra vez.',
+  server_error: 'El servidor no responde ahora. Prueba en unos minutos.',
+  bad_response: 'El servidor respondió algo raro. Prueba más tarde.',
+  expired: 'Esta clave ya venció.', revoked: 'Esta clave fue suspendida.',
+  not_found: 'No encontramos esa clave. Revisa que esté bien escrita.',
+  device_limit: 'Esta clave ya está en el máximo de PCs. Quita una desde tu cuenta de OFFSZN.',
+  trial_used: 'Esta PC ya usó su prueba gratis.',
+  wrong_product: 'Esa clave es de otro plugin. La de Cassette empieza con CASSETTE-.'
+};
+const licText = r => !r ? LIC_ERR.not_found : (r.code && LIC_ERR[r.code]) || r.message || LIC_ERR.not_found;
+function renderLicense() {
+  const wall = $('licWall'), badge = $('badge'), trial = LIC.isValid && LIC.kind === 'trial';
+  badge.textContent = trial ? 'PRUEBA · ' + (LIC.daysLeft > 1 ? LIC.daysLeft + ' DÍAS' : LIC.daysLeft === 1 ? '1 DÍA' : 'ÚLTIMO DÍA') : (VERSION ? 'v' + VERSION : '');
+  badge.classList.toggle('clk', true);
+  if (LIC.isValid) { if (licForced) wall.classList.remove('open'); licForced = false; return; }
+  licForced = true;
+  const c = LIC_LOCK[LIC.code] || LIC_LOCK.expired;
+  $('licTitle').textContent = c.t; $('licSub').textContent = c.s;
+  $('licInput').style.display = $('licGo').style.display = c.retry ? 'none' : '';
+  $('licRetry').style.display = c.retry ? '' : 'none';
+  $('licClose').style.display = 'none';
+  wall.classList.add('open');
+}
+function openLicense() {
+  $('licTitle').textContent = 'Ingresa tu Serial Key'; $('licSub').textContent = 'Pega una clave nueva para cambiar o activar tu licencia.';
+  $('licInput').style.display = $('licGo').style.display = ''; $('licRetry').style.display = 'none'; $('licClose').style.display = ''; $('licErr').textContent = '';
+  $('licWall').classList.add('open'); licForced = false;
+}
+function submitLicense() {
+  const inp = $('licInput'), v = inp.value.trim(), go = $('licGo');
+  if (!v) { $('licErr').textContent = 'Pega tu clave primero.'; return; }
+  go.disabled = true; go.textContent = 'Verificando…'; $('licErr').textContent = '';
+  native('activateLicense', v).then(res => {
+    go.disabled = false; go.textContent = 'Activar plugin';
+    if (res && res.success) { inp.value = ''; $('licWall').classList.remove('open'); licForced = false; toast('¡Listo! Cassette quedó activado.'); native('getLicenseState').then(l => { if (l) { LIC = l; renderLicense(); } }); }
+    else { inp.classList.add('bad'); setTimeout(() => inp.classList.remove('bad'), 1800); $('licErr').textContent = licText(res); }
+  });
+}
+$('licGo').addEventListener('click', submitLicense);
+$('licInput').addEventListener('input', function () { this.value = this.value.toUpperCase(); });
+$('licInput').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') submitLicense(); });
+$('licInput').addEventListener('keyup', e => e.stopPropagation());
+$('licBuy').addEventListener('click', () => native('openURL', 'https://offszn.lat/plugins/all.html'));
+$('licRetry').addEventListener('click', () => { native('refreshLicense'); setTimeout(() => native('getLicenseState').then(l => { if (l) { LIC = l; renderLicense(); } }), 600); });
+$('licClose').addEventListener('click', () => $('licWall').classList.remove('open'));
+$('badge').addEventListener('click', openLicense);
+on('license', l => { if (l) { LIC = l; renderLicense(); } });
 
 let last = performance.now();
 function frame(now) {

@@ -1,6 +1,12 @@
 #pragma once
+#ifndef CASSETTE_TESTING
+ #define CASSETTE_TESTING 0
+#endif
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "CassetteEngine.h"
+#if ! CASSETTE_TESTING
+ #include "licensing/LicenseManager.h"
+#endif
 #include <atomic>
 
 struct CassettePreset
@@ -51,6 +57,12 @@ public:
     juce::String getTheme() const { return apvts.state.getProperty ("theme", "light").toString(); }
     void setTheme (const juce::String& t) { apvts.state.setProperty ("theme", t == "dark" ? "dark" : "light", nullptr); }
 
+    // Licencia: C++ es la única puerta. Sin licencia el audio pasa limpio (señal seca alineada) y no se cambia de cinta.
+    bool isLicensed() const noexcept;
+   #if ! CASSETTE_TESTING
+    CassetteLic::LicenseManager& getLicenseManager() { return *licenseManager; }
+   #endif
+
     // Nivel de salida (pico con caída) para la UI
     float getOutputLevel() const { return outLevel.load(); }
 
@@ -59,6 +71,9 @@ public:
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
     CassetteEngine engine;
+   #if ! CASSETTE_TESTING
+    juce::SharedResourcePointer<CassetteLic::LicenseManager> licenseManager;
+   #endif
     std::atomic<int> currentProgram { 0 };
     std::atomic<float> outLevel { 0.0f };
 

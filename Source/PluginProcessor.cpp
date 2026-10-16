@@ -81,6 +81,15 @@ bool CassetteProcessor::isBusesLayoutSupported (const BusesLayout& layouts) cons
     return layouts.getMainInputChannelSet() == out;
 }
 
+bool CassetteProcessor::isLicensed() const noexcept
+{
+   #if CASSETTE_TESTING || defined (CASSETTE_FORCE_LICENSED)
+    return true;
+   #else
+    return licenseManager->isLicensed();
+   #endif
+}
+
 void CassetteProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     engine.prepare (sampleRate, samplesPerBlock);
@@ -111,7 +120,8 @@ void CassetteProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Mi
     p.spacePreMs = get ("spacePre");
     p.spaceTone  = get ("spaceTone");
     p.spaceWidth = get ("spaceWidth");
-    if (get ("bypass") > 0.5f) { p.mix = 0.0f; p.outDb = 0.0f; p.width = 1.0f; }   // bypass = señal seca alineada (misma latencia, con fundido)
+    // Sin licencia (o en bypass) = señal seca alineada: misma latencia, con fundido, y la pista nunca se corta.
+    if (! isLicensed() || get ("bypass") > 0.5f) { p.mix = 0.0f; p.outDb = 0.0f; p.width = 1.0f; }   // bypass = señal seca alineada (misma latencia, con fundido)
     engine.process (buffer, p);
 
     const float peak = buffer.getMagnitude (0, buffer.getNumSamples());
@@ -134,6 +144,7 @@ const juce::String CassetteProcessor::getProgramName (int index)
 void CassetteProcessor::setCurrentProgram (int index)
 {
     if (! juce::isPositiveAndBelow (index, getNumPrograms())) return;
+    if (! isLicensed()) return;
     currentProgram = index;
     const auto& pr = presets[index];
     auto set = [this] (const char* id, float v)
