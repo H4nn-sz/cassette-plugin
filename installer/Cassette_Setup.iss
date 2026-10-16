@@ -2,7 +2,7 @@
 ;   "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" installer\Cassette_Setup.iss
 ; Toma la compilación Release de build (cmake --build build --config Release --target CassettePlugin_VST3 CassettePlugin_Standalone)
 #ifndef AppVer
-  #define AppVer "1.1.0"
+  #define AppVer "1.2.0"
 #endif
 #ifndef BuildDir
   #define BuildDir "..\build\CassettePlugin_artefacts\Release"
@@ -15,7 +15,7 @@
 AppId={{6C1F4B2A-3D8E-4C51-9A7B-CA55E77E0001}
 AppName=Cassette
 AppVersion={#AppVer}
-AppVerName=Cassette {#AppVer} (Free)
+AppVerName=Cassette {#AppVer}
 AppPublisher=SVNDALPHON
 VersionInfoVersion={#AppVer}
 VersionInfoCompany=SVNDALPHON
@@ -43,8 +43,8 @@ Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"; LicenseFile: "LICENS
 Name: "en"; MessagesFile: "compiler:Default.isl"; LicenseFile: "LICENSE.txt"
 
 [Messages]
-es.WelcomeLabel2=Cassette {#AppVer} (gratis) by SVNDALPHON%n%nCinta lo-fi y espacio: wow & flutter estéreo, hiss, head bump, dropouts, saturación, bitcrush, crackle de vinilo, ancho estéreo, Room / Hall / Space y un knob de Edad. Incluye buscador y guardado de tus propias cintas.%n%nEl VST3 se instalará en:%n  C:\Program Files\Common Files\VST3\Cassette.vst3%n%nCierra tu DAW antes de continuar.
-en.WelcomeLabel2=Cassette {#AppVer} (free) by SVNDALPHON%n%nLo-fi tape and space: stereo wow & flutter, hiss, head bump, dropouts, saturation, bitcrush, vinyl crackle, stereo width, Room / Hall / Space and an Age knob. Includes preset search and saving your own tapes.%n%nThe VST3 will be installed to:%n  C:\Program Files\Common Files\VST3\Cassette.vst3%n%nClose your DAW before continuing.
+es.WelcomeLabel2=Cassette {#AppVer} by SVNDALPHON%n%nCinta lo-fi y espacio: wow & flutter estéreo, hiss, head bump, dropouts, saturación, bitcrush, crackle de vinilo, ancho estéreo, Room / Hall / Space y un knob de Edad. Incluye buscador y guardado de tus propias cintas.%n%nEl VST3 se instalará en:%n  C:\Program Files\Common Files\VST3\Cassette.vst3%n%nCierra tu DAW antes de continuar.
+en.WelcomeLabel2=Cassette {#AppVer} by SVNDALPHON%n%nLo-fi tape and space: stereo wow & flutter, hiss, head bump, dropouts, saturation, bitcrush, vinyl crackle, stereo width, Room / Hall / Space and an Age knob. Includes preset search and saving your own tapes.%n%nThe VST3 will be installed to:%n  C:\Program Files\Common Files\VST3\Cassette.vst3%n%nClose your DAW before continuing.
 
 [CustomMessages]
 es.TypeFull=Instalación completa (VST3 + Standalone)
